@@ -3,8 +3,62 @@ interface Checkpoint {
   timestamp: number;
   name: string;
 }
-
 const PROGRAMMING_HERO_HOST = "web.programming-hero.com";
+
+const SUPPORTED_URL_PATTERNS = [
+  "https://www.youtube.com/*",
+  "https://youtube.com/*",
+  "https://youtu.be/*",
+  "https://web.programming-hero.com/*",
+  "https://phitron.io/*",
+  "https://www.phitron.io/*"
+];
+
+function isSupportedVideoUrl(url: URL): boolean {
+  const host = url.hostname;
+
+  return (
+    host === "youtube.com" ||
+    host === "www.youtube.com" ||
+    host === "youtu.be" ||
+    host === PROGRAMMING_HERO_HOST ||
+    host === "phitron.io" ||
+    host === "www.phitron.io"
+  );
+}
+
+function getPopupLessonKeyFromUrl(url: URL): string | null {
+  const host = url.hostname;
+
+  if (host === PROGRAMMING_HERO_HOST) {
+    // Preserve existing Programming Hero checkpoint keys.
+    return `${url.hostname}${url.pathname}`;
+  }
+
+  if (host === "phitron.io" || host === "www.phitron.io") {
+    return `${url.hostname}${url.pathname}`;
+  }
+
+  if (host === "youtu.be") {
+    const videoId = url.pathname.split("/").filter(Boolean)[0];
+    return videoId ? `youtube.com/watch?v=${videoId}` : null;
+  }
+
+  if (host === "youtube.com" || host === "www.youtube.com") {
+    const videoId = url.searchParams.get("v");
+
+    if (videoId) {
+      return `youtube.com/watch?v=${videoId}`;
+    }
+
+    // Also support YouTube Shorts URLs.
+    const shortsMatch = url.pathname.match(/^\/shorts\/([^/]+)/);
+
+    return shortsMatch ? `youtube.com/shorts/${shortsMatch[1]}` : null;
+  }
+
+  return null;
+}
 
 let currentLessonKey: string | null = null;
 let floatingWindowMode = false;
@@ -46,57 +100,59 @@ function getLessonName(pathname: string): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-async function getProgrammingHeroTab(): Promise<chrome.tabs.Tab | null> {
-  const tabs = await chrome.tabs.query({
-    url: "https://web.programming-hero.com/*"
+async function getSupportedVideoTab(): Promise<chrome.tabs.Tab | null> {
+  const currentWindowTabs = await chrome.tabs.query({
+    active: true,
+    currentWindow: true
   });
 
-  if (tabs.length === 0) {
-    return null;
+  const currentTab = currentWindowTabs[0];
+
+  if (currentTab?.url) {
+    try {
+      if (isSupportedVideoUrl(new URL(currentTab.url))) {
+        return currentTab;
+      }
+    } catch {
+      // Continue searching supported tabs.
+    }
   }
 
-  const activeTab = tabs.find((tab) => tab.active);
+  const tabs = await chrome.tabs.query({
+    url: SUPPORTED_URL_PATTERNS
+  });
 
-  return activeTab ?? tabs[0];
+  return tabs.find((tab) => tab.active) ?? tabs[0] ?? null;
 }
+
 
 async function getCurrentLessonKey(): Promise<string | null> {
   const floatingLessonKey = new URLSearchParams(
     window.location.search
   ).get("lesson");
 
-  if (floatingLessonKey) {
-    try {
-      return decodeURIComponent(floatingLessonKey);
-    } catch {
-      return floatingLessonKey;
-    }
+  // Keep non-YouTube floating windows tied to their original lesson.
+  // YouTube floating windows must follow SPA video navigation.
+  if (
+    floatingLessonKey &&
+    !floatingLessonKey.startsWith("youtube.com/watch?v=") &&
+    !floatingLessonKey.startsWith("youtube.com/shorts/")
+  ) {
+    return floatingLessonKey;
   }
 
-  const tabs = await chrome.tabs.query({
-    active: true,
-    currentWindow: true
-  });
-
-  const tab = tabs[0];
+  const tab = await getSupportedVideoTab();
 
   if (!tab?.url) {
     return null;
   }
 
   try {
-    const url = new URL(tab.url);
-
-    if (url.hostname !== PROGRAMMING_HERO_HOST) {
-      return null;
-    }
-
-    return `${url.hostname}${url.pathname}`;
+    return getPopupLessonKeyFromUrl(new URL(tab.url));
   } catch {
     return null;
   }
 }
-
 async function loadCheckpoints(): Promise<Checkpoint[]> {
   if (!currentLessonKey) {
     return [];
@@ -126,7 +182,7 @@ async function saveCheckpoints(
 }
 
 async function getCurrentVideoTime(): Promise<number | null> {
-  const tab = await getProgrammingHeroTab();
+  const tab = await getSupportedVideoTab();
 
   if (!tab?.id) {
     return null;
@@ -151,7 +207,7 @@ async function getCurrentVideoTime(): Promise<number | null> {
 }
 
 async function seekTo(timestamp: number): Promise<void> {
-  const tab = await getProgrammingHeroTab();
+  const tab = await getSupportedVideoTab();
 
   if (!tab?.id) {
     return;
@@ -335,6 +391,31 @@ async function refreshCurrentTime(): Promise<void> {
   statusElement.textContent = "Video detected";
 }
 
+async function syncCurrentLesson(): Promise<void> {
+  const nextLessonKey = await getCurrentLessonKey();
+
+  if (!nextLessonKey || nextLessonKey === currentLessonKey) {
+    return;
+  }
+
+  currentLessonKey = nextLessonKey;
+
+  const lessonName = document.getElementById("lesson-name");
+
+  if (lessonName) {
+    const pathname = currentLessonKey.split("/").slice(1).join("/");
+    lessonName.textContent = getLessonName(`/${pathname}`);
+  }
+
+  const checkpoints = await loadCheckpoints();
+
+  // Ignore an outdated load if another video was selected meanwhile.
+  if (currentLessonKey !== nextLessonKey) {
+    return;
+  }
+
+  renderCheckpoints(checkpoints);
+}
 async function addCheckpoint(
   name: string,
   timestamp: number
@@ -358,7 +439,7 @@ async function addCheckpoint(
 }
 
 async function openFloatingWindow(): Promise<void> {
-  const tab = await getProgrammingHeroTab();
+  const tab = await getSupportedVideoTab();
 
   if (!tab?.id || !tab.url) {
     return;
@@ -366,12 +447,11 @@ async function openFloatingWindow(): Promise<void> {
 
   try {
     const url = new URL(tab.url);
+    const lessonKey = getPopupLessonKeyFromUrl(url);
 
-    if (url.hostname !== PROGRAMMING_HERO_HOST) {
+    if (!lessonKey) {
       return;
     }
-
-    const lessonKey = `${url.hostname}${url.pathname}`;
 
     await chrome.runtime.sendMessage({
       type: "OPEN_FLOATING_WINDOW",
@@ -463,6 +543,7 @@ document
 
 setInterval(() => {
   void refreshCurrentTime();
-}, 1000);
+  void syncCurrentLesson();
+}, 250);
 
 void initialize();

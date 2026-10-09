@@ -1,18 +1,29 @@
+
 {
   "manifest_version": 3,
-  "name": "Course Checkpoints",
+  "name": "Generic Course Checkpoints",
   "version": "1.0.0",
-  "description": "Create timestamp checkpoints while watching programming courses.",
+  "description": "Create timestamp checkpoints while watching programming courses.(generic)",
   "permissions": [
     "storage"
   ],
   "host_permissions": [
-    "https://web.programming-hero.com/*"
+    "https://www.youtube.com/*",
+    "https://youtube.com/*",
+    "https://youtu.be/*",
+    "https://web.programming-hero.com/*",
+    "https://phitron.io/*",
+    "https://www.phitron.io/*"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://web.programming-hero.com/*"
+        "https://www.youtube.com/*",
+        "https://youtube.com/*",
+        "https://youtu.be/*",
+        "https://web.programming-hero.com/*",
+        "https://phitron.io/*",
+        "https://www.phitron.io/*"
       ],
       "js": [
         "dist/content.js"
@@ -20,7 +31,7 @@
       "run_at": "document_idle"
     }
   ],
-   "background": {
+  "background": {
     "service_worker": "dist/background.js"
   },
   "commands": {

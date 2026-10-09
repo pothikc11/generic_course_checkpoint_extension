@@ -1,3 +1,36 @@
+function getBackgroundLessonKeyFromUrl(url: URL): string | null {
+  const host = url.hostname;
+
+  if (host === "web.programming-hero.com") {
+    return `${url.hostname}${url.pathname}`;
+  }
+
+  if (host === "phitron.io" || host === "www.phitron.io") {
+    return `${url.hostname}${url.pathname}`;
+  }
+
+  if (host === "youtu.be") {
+    const videoId = url.pathname.split("/").filter(Boolean)[0];
+    return videoId ? `youtube.com/watch?v=${videoId}` : null;
+  }
+
+  if (host === "youtube.com" || host === "www.youtube.com") {
+    const videoId = url.searchParams.get("v");
+
+    if (videoId) {
+      return `youtube.com/watch?v=${videoId}`;
+    }
+
+    const shortsMatch = url.pathname.match(/^\/shorts\/([^/]+)/);
+
+    return shortsMatch ? `youtube.com/shorts/${shortsMatch[1]}` : null;
+  }
+
+  return null;
+}
+
+
+
 chrome.commands.onCommand.addListener(async (command) => {
   if (command !== "add-checkpoint") {
     return;
@@ -17,7 +50,9 @@ chrome.commands.onCommand.addListener(async (command) => {
   try {
     const url = new URL(tab.url);
 
-    if (url.hostname !== "web.programming-hero.com") {
+    const lessonKey = getBackgroundLessonKeyFromUrl(url);
+
+    if (!lessonKey) {
       return;
     }
 
@@ -34,7 +69,6 @@ chrome.commands.onCommand.addListener(async (command) => {
 
     const timestamp = response.currentTime;
 
-    const lessonKey = `${url.hostname}${url.pathname}`;
 
     const result = await chrome.storage.local.get(lessonKey);
 
