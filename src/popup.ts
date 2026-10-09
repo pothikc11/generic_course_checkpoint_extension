@@ -131,13 +131,10 @@ async function getCurrentLessonKey(): Promise<string | null> {
     window.location.search
   ).get("lesson");
 
-  // Keep non-YouTube floating windows tied to their original lesson.
-  // YouTube floating windows must follow SPA video navigation.
-  if (
-    floatingLessonKey &&
-    !floatingLessonKey.startsWith("youtube.com/watch?v=") &&
-    !floatingLessonKey.startsWith("youtube.com/shorts/")
-  ) {
+  // A floating window is opened for one specific lesson. Keep it bound to
+  // that key so polling cannot switch it to another tab/video and split the
+  // list from the shortcut handler's storage key.
+  if (floatingLessonKey) {
     return floatingLessonKey;
   }
 

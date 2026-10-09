@@ -29,6 +29,40 @@ function getBackgroundLessonKeyFromUrl(url: URL): string | null {
   return null;
 }
 
+const SUPPORTED_VIDEO_URL_PATTERNS = [
+  "https://www.youtube.com/*",
+  "https://youtube.com/*",
+  "https://youtu.be/*",
+  "https://web.programming-hero.com/*",
+  "https://phitron.io/*",
+  "https://www.phitron.io/*"
+];
+
+async function getShortcutVideoTab(): Promise<chrome.tabs.Tab | null> {
+  const currentWindowTabs = await chrome.tabs.query({
+    active: true,
+    currentWindow: true
+  });
+
+  const currentTab = currentWindowTabs[0];
+
+  if (currentTab?.url) {
+    try {
+      if (getBackgroundLessonKeyFromUrl(new URL(currentTab.url))) {
+        return currentTab;
+      }
+    } catch {
+      // Continue searching supported tabs.
+    }
+  }
+
+  const tabs = await chrome.tabs.query({
+    url: SUPPORTED_VIDEO_URL_PATTERNS
+  });
+
+  return tabs.find((tab) => tab.active) ?? tabs[0] ?? null;
+}
+
 
 
 chrome.commands.onCommand.addListener(async (command) => {
@@ -36,12 +70,7 @@ chrome.commands.onCommand.addListener(async (command) => {
     return;
   }
 
-  const tabs = await chrome.tabs.query({
-    active: true,
-    currentWindow: true,
-  });
-
-  const tab = tabs[0];
+  const tab = await getShortcutVideoTab();
 
   if (!tab?.id || !tab.url) {
     return;
