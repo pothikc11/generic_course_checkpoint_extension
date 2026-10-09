@@ -162,10 +162,15 @@ chrome.runtime.onMessage.addListener(
       return;
     }
 
+    if (typeof message.tabId !== "number") {
+      return;
+    }
+
     const lessonKey = encodeURIComponent(message.lessonKey);
+    const tabId = encodeURIComponent(String(message.tabId));
 
     const url = chrome.runtime.getURL(
-      `src/popup.html?floating=true&lesson=${lessonKey}`
+      `src/popup.html?floating=true&lesson=${lessonKey}&tab=${tabId}`
     );
 
     void chrome.windows.create({

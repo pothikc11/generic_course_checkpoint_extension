@@ -127,14 +127,30 @@ async function getSupportedVideoTab(): Promise<chrome.tabs.Tab | null> {
 
 
 async function getCurrentLessonKey(): Promise<string | null> {
-  const floatingLessonKey = new URLSearchParams(
-    window.location.search
-  ).get("lesson");
+  const params = new URLSearchParams(window.location.search);
+  const floatingLessonKey = params.get("lesson");
+  const floatingTabId = Number(params.get("tab"));
 
-  // A floating window is opened for one specific lesson. Keep it bound to
-  // that key so polling cannot switch it to another tab/video and split the
-  // list from the shortcut handler's storage key.
-  if (floatingLessonKey) {
+  // Follow the tab that opened the floating window. This allows SPA/video
+  // navigation in that tab while avoiding switches caused by the floating
+  // window becoming focused or another tab becoming active.
+  if (floatingWindowMode && Number.isInteger(floatingTabId)) {
+    try {
+      const tab = await chrome.tabs.get(floatingTabId);
+
+      if (tab.url) {
+        const lessonKey = getPopupLessonKeyFromUrl(new URL(tab.url));
+
+        if (lessonKey) {
+          return lessonKey;
+        }
+      }
+    } catch {
+      // Fall back to the lesson key captured when the window was opened.
+    }
+  }
+
+  if (floatingWindowMode && floatingLessonKey) {
     return floatingLessonKey;
   }
 
@@ -463,7 +479,8 @@ async function openFloatingWindow(): Promise<void> {
 
     await chrome.runtime.sendMessage({
       type: "OPEN_FLOATING_WINDOW",
-      lessonKey
+      lessonKey,
+      tabId: tab.id
     });
   } catch {
     // Ignore invalid URLs.
