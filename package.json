@@ -1,0 +1,13 @@
+{
+  "name": "course-checkpoints",
+  "version": "1.0.0",
+  "description": "Timestamp checkpoints for online programming courses",
+  "private": true,
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.1",
+    "typescript": "^5.9.3"
+  }
+}

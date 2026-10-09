@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+  <title>Course Checkpoints</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <main class="container">
+
+    <section class="current-card">
+      <div class="current-label">
+        <span class="live-dot"></span>
+        CURRENT POSITION
+      </div>
+
+      <div class="current-time-row">
+        <strong id="current-time">00:00</strong>
+
+        <span id="video-status" class="status">
+          Detecting video...
+        </span>
+      </div>
+    </section>
+
+    <form id="checkpoint-form" class="add-form">
+      <input
+        id="checkpoint-name"
+        type="text"
+        placeholder="Name this moment..."
+        autocomplete="off"
+        required
+      />
+
+      <button type="submit" class="add-button">
+        Add
+      </button>
+    </form>
+
+    <div class="shortcut-hint">
+      <span>Quick add</span>
+
+      <div class="shortcut-keys">
+        <kbd>Ctrl</kbd>
+        <span>+</span>
+        <kbd>Shift</kbd>
+        <span>+</span>
+        <kbd>Q</kbd>
+      </div>
+    </div>
+
+    <section class="checkpoints-section">
+      <div class="section-heading">
+        <div>
+          <h2>Checkpoints</h2>
+          <p>Jump back to saved moments</p>
+        </div>
+
+        <span id="checkpoint-count">0</span>
+      </div>
+
+      <div id="checkpoint-list" class="checkpoint-list"></div>
+    </section>
+
+    <div id="empty-state" class="empty-state">
+      <div class="empty-icon">◇</div>
+
+      <strong>No checkpoints yet</strong>
+
+      <p>
+        Save a moment using the form above
+        or press <strong>Ctrl + Shift + Q</strong>.
+      </p>
+    </div>
+
+    <footer class="footer">
+      <button
+        id="keep-open"
+        class="keep-open-button"
+        type="button"
+      >
+        <span class="window-icon">▣</span>
+        Open floating window
+      </button>
+    </footer>
+
+  </main>
+
+  <script src="../dist/popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Course Checkpoints",
+  "version": "1.0.0",
+  "description": "Create timestamp checkpoints while watching programming courses.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://web.programming-hero.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://web.programming-hero.com/*"
+      ],
+      "js": [
+        "dist/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+   "background": {
+    "service_worker": "dist/background.js"
+  },
+  "commands": {
+    "add-checkpoint": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Q"
+      },
+      "description": "Add checkpoint at current video time"
+    }
+  },
+  "action": {
+    "default_title": "Course Checkpoints",
+    "default_popup": "src/popup.html"
+  }
+}
