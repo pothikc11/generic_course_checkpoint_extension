@@ -67,14 +67,26 @@ chrome.commands.onCommand.addListener(async (command) => {
       return;
     }
 
-    const timestamp = response.currentTime;
 
+    const timestamp = response.currentTime;
 
     const result = await chrome.storage.local.get(lessonKey);
 
     const checkpoints = Array.isArray(result[lessonKey])
       ? result[lessonKey]
       : [];
+
+    // Prevent duplicate checkpoints within the same displayed second.
+    const isDuplicate = checkpoints.some(
+      (checkpoint: { timestamp: number }) =>
+        Math.floor(checkpoint.timestamp) === Math.floor(timestamp)
+    );
+
+    if (isDuplicate) {
+      return;
+    }
+
+
 
     const checkpoint = {
       id: crypto.randomUUID(),
