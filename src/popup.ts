@@ -261,7 +261,7 @@ function renderCheckpoints(
     name.className = "checkpoint-name";
     name.textContent = checkpoint.name;
 
-    button.append(time, name);
+    button.append(name, time);
 
     button.addEventListener("click", () => {
       void seekTo(checkpoint.timestamp);
