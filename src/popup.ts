@@ -416,11 +416,22 @@ async function syncCurrentLesson(): Promise<void> {
 
   renderCheckpoints(checkpoints);
 }
+
 async function addCheckpoint(
   name: string,
   timestamp: number
 ): Promise<void> {
   const checkpoints = await loadCheckpoints();
+
+  // Prevent duplicates at the same displayed timestamp (mm:ss).
+  const isDuplicate = checkpoints.some(
+    (checkpoint) =>
+      Math.floor(checkpoint.timestamp) === Math.floor(timestamp)
+  );
+
+  if (isDuplicate) {
+    return;
+  }
 
   const checkpoint: Checkpoint = {
     id: crypto.randomUUID(),
